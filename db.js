@@ -2,6 +2,7 @@ var Sequelize = require('sequelize');
 var env = process.env.NODE_ENV || 'development';
 var sequelize;
 var _ = require('underscore');
+var bcrypt = require('bcrypt');
 
 if (env === 'production') {
 	sequelize = new Sequelize(process.env.DATABASE_URL, {
@@ -27,5 +28,26 @@ db.user.prototype.toPublicJSON = function() {
 	return _.pick(json, 'id', 'email', 'createdAt', 'updatedAt');
 };
 
+db.user.authenticate = function(body) {
+	return new Promise(function(resolve, reject) {
+		if (typeof body.email !== 'string' || typeof body.password !== 'string') {
+			return reject();
+		}
+
+		db.user.findOne({
+			where: {
+				email: body.email
+			}
+		}).then(function(user) {
+			if (!user || !bcrypt.compareSync(body.password, user.get('password_hash'))) {
+				return reject();
+			}
+
+			resolve(user);
+		}, function(e) {
+			reject();
+		});
+	});
+};
 
 module.exports = db;
