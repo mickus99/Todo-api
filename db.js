@@ -3,6 +3,8 @@ var env = process.env.NODE_ENV || 'development';
 var sequelize;
 var _ = require('underscore');
 var bcrypt = require('bcrypt');
+var cryptojs = require('crypto-js');
+var jwt = require('jsonwebtoken');
 
 if (env === 'production') {
 	sequelize = new Sequelize(process.env.DATABASE_URL, {
@@ -24,6 +26,7 @@ db.Sequelize = Sequelize;
 
 //instance method
 db.user.prototype.toPublicJSON = function() {
+	console.log(this);
 	var json = this.toJSON();
 	return _.pick(json, 'id', 'email', 'createdAt', 'updatedAt');
 };
@@ -48,6 +51,26 @@ db.user.authenticate = function(body) {
 			reject();
 		});
 	});
+};
+
+db.user.generateToken = function (type, user) {
+	if(!_.isString(type)) {
+		return undefined;
+	}
+
+	try {
+		var stringData = JSON.stringify({id: user.id, type: type});
+		var encryptedData = cryptojs.AES.encrypt(stringData, 'abc123!@#!').toString();
+		var token = jwt.sign({
+			token: encryptedData
+		}, 'qwerty098');
+
+		return token;
+	} catch (e) {
+		console.error(e);
+		return undefined;
+	}
+
 };
 
 module.exports = db;
